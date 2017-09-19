@@ -10,12 +10,22 @@ import (
 
 //ConnContext Client connection context.
 type ConnContext struct {
-	c net.Conn
+	c  net.Conn
+	ch chan interface{}
 }
 
 //SetConn connection setter
 func (rc *ConnContext) SetConn(conn net.Conn) {
 	rc.c = conn
+}
+
+//SetChan ConnContext channel setter
+func (rc *ConnContext) SetChan(ch chan interface{}) {
+	rc.ch = ch
+}
+
+func (rc *ConnContext) GetChan() chan interface{} {
+	return rc.ch
 }
 
 //SendPackage package sender
@@ -77,12 +87,38 @@ func Encode(v interface{}) ([]byte, error) {
 
 //Decode form Json, v must be a pointer of the response message struct
 func Decode(b []byte, v interface{}) error {
-	err = json.Unmarshal(b, v)
+	err := json.Unmarshal(b, v)
 	if err != nil {
 		fmt.Printf("Json unmarshal error: %s.\n", err)
 		return err
 	}
 	return nil
+}
+
+func ContextStart(context *ConnContext) {
+	var b []byte
+	var err error
+	ch := context.GetChan()
+	for req := range ch {
+		r, ok := req.(Request)
+		if !ok {
+			fmt.Printf("Type assertion failed: req(%#v) not Request struct!", req)
+			continue
+		}
+		b, err = Encode(req)
+		if err != nil {
+			continue
+		}
+		err = context.SendPackage(b)
+		if err != nil {
+			continue
+		}
+		b, err = context.RecvPackage()
+		if err != nil {
+			continue
+		}
+		HandleCmdResp(r.Cmd, b)
+	}
 }
 
 func main() {
@@ -99,4 +135,13 @@ func main() {
 	}()
 	context := new(ConnContext)
 	context.SetConn(conn)
+	ch := make(chan interface{}, 100)
+	context.SetChan(ch)
+
+	wch := make(chan interface{})
+	go HeartbeatTicker(ch, wch)
+	go ContextStart(context)
+	WorkSequence(ch)
+
+	<-wch
 }
