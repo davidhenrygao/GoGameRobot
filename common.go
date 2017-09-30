@@ -8,8 +8,9 @@ const (
 	HEARTBEAT = 1
 	ECHO      = 2
 
-	LOGIN      = 100
-	CHANGENAME = 101
+	LOGIN           = 100
+	CHANGENAME      = 101
+	QUERYPLAYERINFO = 102
 )
 
 const (
@@ -39,7 +40,7 @@ func WorkSequence(ch chan<- interface{}) {
 	SendLogin(ch)
 	SendChangename(ch)
 	SendEcho(ch)
-	SendLogin(ch)
+	SendQueryplayerinfo(ch)
 }
 
 func HandleCmdResp(cmd uint, b []byte) {
@@ -61,6 +62,8 @@ func HandleCmdResp(cmd uint, b []byte) {
 		LoginHandler(b)
 	case CHANGENAME:
 		ChangenameHandler(b)
+	case QUERYPLAYERINFO:
+		QueryplayerinfoHandler(b)
 	default:
 		fmt.Printf("Unknown command %d.\n", cmd)
 	}

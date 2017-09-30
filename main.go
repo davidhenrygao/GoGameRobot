@@ -122,7 +122,7 @@ func ContextStart(context *ConnContext) {
 }
 
 func main() {
-	conn, err := net.Dial("tcp", "192.168.2.199:10086")
+	conn, err := net.Dial("tcp", "192.168.2.188:10086")
 	if err != nil {
 		fmt.Println(err)
 		return
